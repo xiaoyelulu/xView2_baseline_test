@@ -54,7 +54,7 @@ def move_files(files, base_dir, output_dir):
             # If not create it
             makedirs(path.join(output_dir, disaster, "labels"))
 
-        pre_label_file = filename.replace("png", "json")
+        pre_label_file = filename.replace("tif", "json")
         # Move the pre and post label files to the labels directory under the disaster name
         cp(
             path.join(base_dir, "labels", pre_label_file),
