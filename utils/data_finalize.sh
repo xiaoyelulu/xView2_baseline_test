@@ -82,7 +82,8 @@ for disaster in $disasters; do
     masks=`/bin/ls -1 "$input"/"$disaster"/masks`
     for mask in $masks; do
         cp "$input"/"$disaster"/masks/$mask "$input"/spacenet_gt/labels
-        cp "$input"/"$disaster"/images/$mask "$input"/spacenet_gt/images
+        img_tif=${mask/png/tif}
+        cp "$input"/"$disaster"/images/$img_tif "$input"/spacenet_gt/images
     done
 done
 
