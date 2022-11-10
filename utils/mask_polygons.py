@@ -195,7 +195,7 @@ def mask_chips(json_path, images_directory, output_directory, single_file, borde
                   unit='poly',
                   leave=False):
         # Our chips start off in life as PNGs
-        chip_image_id = path.splitext(j)[0] + '.png'
+        chip_image_id = path.splitext(j)[0] + '.tif'
         mask_file = path.splitext(j)[0]
 
         # Loading the per chip json
