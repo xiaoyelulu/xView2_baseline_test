@@ -50,9 +50,10 @@ def _read_label_image_as_array(path, dtype):
             f.close()
     return image
 
-
+from skimage import io
 def _read_image_as_array(path, dtype):
-    f = Image.open(path)
+    #f = Image.open(path)
+    f = io.imread(path)
     try:
         image = np.asarray(f, dtype=dtype)
     finally:
@@ -73,7 +74,7 @@ class LabeledImageDataset(dataset_mixin.DatasetMixin):
                 for i, line in enumerate(f):
                     line = line.rstrip('\n')
                     image_filename = line
-                    label_filename = line
+                    label_filename = line.replace("tif", "png")
                     pairs.append((image_filename, label_filename))
         self._pairs = pairs
         self._root = root
