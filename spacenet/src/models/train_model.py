@@ -37,19 +37,19 @@ import os
 def train_model():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('dataset', help='Path to directory containing train.txt, val.txt, and mean.npy')
-    parser.add_argument('images',  help='Root directory of input images')
-    parser.add_argument('labels',  help='Root directory of label images')
-    
-    parser.add_argument('--batchsize', '-b', type=int, default=16,
+    parser.add_argument('--dataset', default='/mnt/disk3/zwy/XBD_split_Disaster/spacenet_gt/dataSet/',help='Path to directory containing train.txt, val.txt, and mean.npy')
+    parser.add_argument('--images',default='/mnt/disk3/zwy/XBD_split_Disaster/spacenet_gt/images/', help='Root directory of input images')
+    parser.add_argument('--labels',default='/mnt/disk3/zwy/XBD_split_Disaster/spacenet_gt/labels/', help='Root directory of label images')
+
+    parser.add_argument('--batchsize', '-b', type=int, default=6,
                         help='Number of images in each mini-batch')
     parser.add_argument('--test-batchsize', '-B', type=int, default=4,
                         help='Number of images in each test mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=50,
+    parser.add_argument('--epoch', '-e', type=int, default=100,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--frequency', '-f', type=int, default=1,
                         help='Frequency of taking a snapshot')
-    parser.add_argument('--gpu', '-g', type=int, default=0,
+    parser.add_argument('--gpu', '-g', type=str, default='1,2',
                         help='GPU ID (negative value indicates CPU)')
     parser.add_argument('--out', '-o', default='logs',
                         help='Directory to output the result under "models" directory')
@@ -67,7 +67,7 @@ def train_model():
 
     assert (args.tcrop % 16 == 0) and (args.vcrop % 16 == 0), "tcrop and vcrop must be divisible by 16."
 
-    if args.gpu < 0:
+    if int(args.gpu[0]) < 0:
         from tboard_logger_cpu import TensorboardLogger
     else:
         from tboard_logger import TensorboardLogger
@@ -77,45 +77,49 @@ def train_model():
     print('# Crop-size: {}'.format(args.tcrop))
     print('# epoch: {}'.format(args.epoch))
     print('')
-    
+
     this_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.normpath(os.path.join(this_dir, "../../models"))
     log_dir = os.path.join(models_dir, args.out)
     writer = SummaryWriter(log_dir=log_dir)
-    
+
     # Set up a neural network to train
     # Classifier reports softmax cross entropy loss and accuracy at every
     # iteration, which will be used by the PrintReport extension below.
     model = UNet()
-    if args.gpu >= 0:
+    if int(args.gpu[0]) >= 0:
         # Make a specified GPU current
-        chainer.cuda.get_device_from_id(args.gpu).use()
-        model.to_gpu()  # Copy the model to the GPU
+        # chainer.cuda.get_device_from_id(args.gpu).use()
+        # model.to_gpu()  # Copy the model to the GPU
 
+        chainer.cuda.get_device_from_array('1,2').use() #查看两个gpu编号的cuda是否能用
+        model.to_gpu(2)   #把模型放入cuda:2进行训练
     # Setup an optimizer
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
-    
+
     # Load mean image
     mean = np.load(os.path.join(args.dataset, "mean.npy"))
-    
+
     # Load the MNIST dataset
-    train = LabeledImageDataset(os.path.join(args.dataset, "train.txt"), args.images, args.labels, 
+    train = LabeledImageDataset(os.path.join(args.dataset, "train.txt"), args.images, args.labels,
                                 mean=mean, crop_size=args.tcrop, test=False, distort=False)
-    
-    test = LabeledImageDataset (os.path.join(args.dataset, "val.txt"), args.images, args.labels, 
-                                mean=mean, crop_size=args.vcrop, test=True, distort=False)
+
+    test = LabeledImageDataset(os.path.join(args.dataset, "val.txt"), args.images, args.labels,
+                               mean=mean, crop_size=args.vcrop, test=True, distort=False)
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
     test_iter = chainer.iterators.SerialIterator(test, args.test_batchsize, repeat=False, shuffle=False)
 
     # Set up a trainer
-    updater = training.StandardUpdater(
-        train_iter, optimizer, device=args.gpu)
+    # updater = training.StandardUpdater(
+    #     train_iter, optimizer, device=args.gpu)   #单gpu方案
+    updater = training.updaters.ParallelUpdater(train_iter, optimizer,
+                                                devices={'main': 2, 'second': 1}) #训练数据，多GPU采用数据并行方案，查考https://bennix.github.io/blog/2017/12/14/chain_gpu/#:~:text=%E4%BE%8B%E5%A6%82%EF%BC%8Cchainer.cuda.to_gpu%EF%BC%88%EF%BC%89%E5%87%BD%E6%95%B0%E5%B0%86numpy.ndarray%E5%AF%B9%E8%B1%A1%E5%A4%8D%E5%88%B6%E5%88%B0%E6%8C%87%E5%AE%9A%E7%9A%84%E8%AE%BE%E5%A4%87%EF%BC%9A%20x_cpu%20%3D%20np.ones%28%285%2C%204%2C,3%29%2C%20dtype%3Dnp.float32%29%20x_gpu%20%3D%20cuda.to_gpu%28x_cpu%2C%20device%3D1%29
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=log_dir)
 
     # Evaluate the model with the test dataset for each epoch
-    trainer.extend(extensions.Evaluator(test_iter, model, device=args.gpu))
+    trainer.extend(extensions.Evaluator(test_iter, model, device=1))  #设置验证数据集在哪个cuda上运行
 
     # Dump a computational graph from 'loss' variable at the first iteration
     # The "main" refers to the target link of the "main" optimizer.
@@ -124,7 +128,7 @@ def train_model():
     # Take a snapshot for each specified epoch
     frequency = args.epoch if args.frequency == -1 else max(1, args.frequency)
     trainer.extend(extensions.snapshot(), trigger=(frequency, 'epoch'))
-    
+
     # Save trained model for each specific epoch
     trainer.extend(extensions.snapshot_object(
         model, 'model_iter_{.updater.iteration}'), trigger=(frequency, 'epoch'))
@@ -153,12 +157,12 @@ def train_model():
 
     # Print a progress bar to stdout
     trainer.extend(extensions.ProgressBar())
-    
+
     # Write training log to TensorBoard log file
     trainer.extend(TensorboardLogger(writer,
-        ['main/loss', 'validation/main/loss',
-         'main/accuracy', 'validation/main/accuracy']))
-    
+                                     ['main/loss', 'validation/main/loss',
+                                      'main/accuracy', 'validation/main/accuracy']))
+
     if args.resume:
         # Resume from a snapshot
         chainer.serializers.load_npz(args.resume, trainer)
@@ -168,4 +172,5 @@ def train_model():
 
 
 if __name__ == '__main__':
+
     train_model()
