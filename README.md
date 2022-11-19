@@ -246,7 +246,7 @@ arguments:
 --input_dir                            path to xBD data
 --output_dir                           existing path to an output directory
 --output_dir_csv                       path to where you want train.csv and test.csv to be saved
---val_split_pct                        a decimal number between 0.0 and 1.0 for the split percentage in validation set
+--val_split_pct                        a decimal number between 0.0 and 1.0 for the split percentage in validation set 验证集的比例
 
 ```
 
