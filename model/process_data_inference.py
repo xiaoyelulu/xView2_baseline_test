@@ -64,11 +64,12 @@ def process_img(img_array, polygon_pts, scale_pct):
 
     return img_array[ymin:ymax, xmin:xmax, :]
 
-
+from skimage import io
 def process_img_poly(img_path, label_path,  output_dir, output_csv):
-    x_data = [] 
-    img_obj = Image.open(img_path)
-
+    x_data = []
+    #img_obj = Image.open(img_path)
+    img_obj = io.imread(
+        img_path)
     #Applies histogram equalization to image
     img_array = np.array(img_obj)
     #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
