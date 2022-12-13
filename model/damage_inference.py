@@ -49,7 +49,7 @@ BATCH_SIZE = 64
 NUM_EPOCHS = 120
 LEARNING_RATE = 0.0001
 RANDOM_SEED = 123
-LOG_DIR = '/tmp/inference/classification_log_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+LOG_DIR = '/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/log/classification_log_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 
 damage_intensity_encoding = dict() 
@@ -131,19 +131,22 @@ def main():
 
     parser = argparse.ArgumentParser(description='Run Building Damage Classification Training & Evaluation')
     parser.add_argument('--test_data',
-                        required=True,
-                        metavar="/path/to/xBD_test_dir",
+                        required=False,
+                        default="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/output_polygons/",
+                        metavar="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/output_polygons/",
                         help="Full path to the parent dataset directory")
     parser.add_argument('--test_csv',
-                        required=True,
-                        metavar="/path/to/xBD_test_csv",
+                        required=False,
+                        default="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/output.csv",
                         help="Full path to the parent dataset directory")
     parser.add_argument('--model_weights',
-                        default=None,
+                        required=False,
+                        default="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/trail/-saved-model-100-0.72.hdf5",
                         metavar='/path/to/input_model_weights',
                         help="Path to input weights")
     parser.add_argument('--output_json',
-                        required=True,
+                        required=False,
+                        default="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/out_json/1.json",
                         metavar="/path/to/output_json")
 
     args = parser.parse_args()

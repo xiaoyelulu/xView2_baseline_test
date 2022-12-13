@@ -100,20 +100,22 @@ def main():
 
     parser = argparse.ArgumentParser(description='Run Building Damage Classification Training & Evaluation')
     parser.add_argument('--input_img',
-                        required=True,
+                        required=False,
+                        #default='/mnt/disk3/zwy/XBD/test/images/hurricane-michael_00000070_post_disaster.tif',
+                        default='/mnt/disk3/zwy/XBD/test/images/',
                         metavar="/path/to/xBD_input",
                         help="Full path to the parent dataset directory")
     parser.add_argument('--label_path',
-                        required=True,
-                        metavar="/path/to/xBD_input",
+                        required=False,
+                        default='/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/spacenet/infer_out/1.json',
                         help="Full path to the parent dataset directory")
     parser.add_argument('--output_dir',
-                        required=True,
-                        metavar='/path/to/xBD_output',
+                        required=False,
+                        default='/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/output_polygons',
                         help="Path to new directory to save images")
     parser.add_argument('--output_csv',
-                        required=True, 
-                        metavar='/path/to/xBD_output',
+                        required=False,
+                        default='/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/model/infer_data/output.csv',
                         help="Path to save the csv file")
 
     args = parser.parse_args()
