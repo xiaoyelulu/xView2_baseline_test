@@ -40,8 +40,8 @@ help_message () {
 
 input=""
 input_post=""
-inference_base="/tmp/inference"
-LOGFILE="/tmp/inference_log"
+inference_base="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/tmp/inference"
+LOGFILE="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/tmp/inference_log"
 XBDIR=""
 virtual_env=""
 localization_weights=""
@@ -129,12 +129,12 @@ else
 fi
 
 cd "$XBDIR"/spacenet/inference/
-
+printf "$XBDIR"/spacenet/inference/
 # Quietly running the localization inference to output a json with the predicted polygons from the supplied input image
 printf "Running localization\n"
-python3 ./inference.py --input "$input" --weights "$localization_weights" --mean "$XBDIR"/weights/mean.npy --output "$label_temp"/"${input_image%.*}".json >> "$LOGFILE" 2>&1
+python "$XBDIR"/spacenet/inference/inference.py --input "$input" --weights "$localization_weights" --mean "$XBDIR"/weights/mean.npy --output "$label_temp"/"${input_image%.*}".json >> "$LOGFILE" 2>&1
 
-printf "\n" >> "$LOGFILE"
+printf "loc done\n" >> "$LOGFILE"
 
 # Classification inferences start below
 cd "$XBDIR"/model
@@ -164,7 +164,7 @@ printf "\n" >> "$LOGFILE"
 
 # Transforming the inference json file to the image required for scoring
 printf "Finalizing output file" 
-python3 "$XBDIR"/utils/inference_image_output.py --input "$inference_base"/inference.json --output "$output_file"  >> "$LOGFILE" 2>&1
+python3 "$XBDIR"/utils/inference_image_output.py --input "$inference_base"/inference.json --output "$output_file"/"${input_image%.*}".png  >> "$LOGFILE" 2>&1
 
 #Cleaning up by removing the temporary working directory we created
 printf "Cleaning up\n"
