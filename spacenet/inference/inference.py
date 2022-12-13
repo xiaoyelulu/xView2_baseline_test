@@ -15,6 +15,8 @@
 
 import resource
 import sys
+from skimage import io
+
 sys.path.append('../src/models')
 
 from segmentation_cpu import SegmentationModel as Model
@@ -26,10 +28,11 @@ import json
 from imantics import Polygons, Mask
 from simplification.cutil import simplify_coords_vwp
 
+
 def create_wkt(polygon):
     """
     :param polygon: a single polygon in the format [(x1,y1), (x2,y2), ...]
-    :returns: a wkt formatted string ready to be put into the json 
+    :returns: a wkt formatted string ready to be put into the json
     """
     wkt = 'POLYGON (('
 
@@ -51,30 +54,30 @@ def create_json(adjusted_polygons):
         "features": {
             "lng_lat": [],
             "xy": []
-        }, 
+        },
         "metadata": {
             "sensor": "",
             "provider_asset_type": "",
             "gsd": 0,
-            "capture_date": "", 
-            "off_nadir_angle": 0, 
-            "pan_resolution": 0, 
-            "sun_azimuth": 0, 
-            "sun_elevation": 0, 
-            "target_azimuth": 0, 
-            "disaster": "", 
-            "disaster_type": "", 
-            "catalog_id": "", 
-            "original_width": 0, 
-            "original_height": 0, 
-            "width": 0, 
-            "height": 0, 
-            "id": "", 
+            "capture_date": "",
+            "off_nadir_angle": 0,
+            "pan_resolution": 0,
+            "sun_azimuth": 0,
+            "sun_elevation": 0,
+            "target_azimuth": 0,
+            "disaster": "",
+            "disaster_type": "",
+            "catalog_id": "",
+            "original_width": 0,
+            "original_height": 0,
+            "width": 0,
+            "height": 0,
+            "id": "",
             "img_name": ""
         }
     }
 
-    # Using a lambda function to place the WKT string in the list of polygons 
+    # Using a lambda function to place the WKT string in the list of polygons
     polygon_template = lambda poly, uuid: {
         'properties': {
             'feature_type': 'building',
@@ -92,61 +95,68 @@ def create_json(adjusted_polygons):
 
     return output_json
 
+
 def gen_uuid():
     return str(uuid4())
 
+
 def inference(image, score, output_file):
     building_score = score[1]
-    
+
     building_mask_pred = (np.argmax(score, axis=0) == 1)
     polygons = Mask(building_mask_pred).polygons()
-    
+
     new_predictions = []
-    
+
     for poly in polygons:
         if len(poly) >= 3:
             f = poly.reshape(-1, 2)
             simplified_vw = simplify_coords_vwp(f, .3)
             if len(simplified_vw) > 2:
-                    mpoly = []
-                    # Rebuilding the polygon in the way that PIL expects the values [(x1,y1),(x2,y2)]
-                    for i in simplified_vw:
-                        mpoly.append((i[0], i[1]))
-                    # Adding the first point to the last to close the polygon
-                    mpoly.append((simplified_vw[0][0], simplified_vw[0][1]))
-                    new_predictions.append(mpoly)
-            
+                mpoly = []
+                # Rebuilding the polygon in the way that PIL expects the values [(x1,y1),(x2,y2)]
+                for i in simplified_vw:
+                    mpoly.append((i[0], i[1]))
+                # Adding the first point to the last to close the polygon
+                mpoly.append((simplified_vw[0][0], simplified_vw[0][1]))
+                new_predictions.append(mpoly)
+
     # Creating the json with the predicted and then adjusted polygons
     output_json = create_json(new_predictions)
-    
+
     with open(output_file, 'w') as out_file:
         json.dump(output_json, out_file)
 
-if __name__ == "__main__": 
-    import argparse
 
+if __name__ == "__main__":
+    import argparse
+    print(11)
     # Parse command line arguments
     parser = argparse.ArgumentParser(
         description=
         """inference.py: takes an image and creates inferred polygons json off the VW algorithm and the unet model predictions"""
     )
     parser.add_argument('--input',
-                        required=True,
+                        required=False,
+                        default='/mnt/disk3/zwy/XBD/test/images/hurricane-michael_00000070_pre_disaster.tif',
                         metavar='/path/to/input/image.png')
     parser.add_argument(
         '--weights',
-        required=True,
+        required=False,
+        default="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/spacenet/models/logs/model_iter_44800",
         metavar='/full/path/to/mode_iter_XXXX',
         help="Must be the output to a unet model weights trained for xView2"
     )
     parser.add_argument(
         '--mean',
-        required=True,
+        required=False,
+        default="/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/weights/mean.npy",
         metavar='/full/path/to/mean.npy',
         help="a numpy data structure file that is the mean of the training images (found by running ./src/features/compute_mean.py)"
     )
     parser.add_argument('--output',
-                        required=True,
+                        required=False,
+                        default='/mnt/disk3/zwy/zwy/sematicseg/xView2_baseline-master/spacenet/infer_out/1.json',
                         metavar="/path/to/output/file.json")
     args = parser.parse_args()
 
@@ -154,8 +164,9 @@ if __name__ == "__main__":
     # Modify the paths based on your trained model location if needed.
     mean = np.load(args.mean)
     model = Model(args.weights, mean)
- 
-    image = np.array(Image.open(args.input))
+    image = io.imread(
+        args.input)
+    # image = np.array(Image.open(args.input))
     score = model.apply_segmentation(image)
     inference(image, score, args.output)
 
